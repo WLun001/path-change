@@ -1,0 +1,7 @@
+repos:
+  demo:
+    url: https://github.com/WLun001/path-change
+    paths:
+      - "examples/**"
+  demo2:
+    url: git@github.com:WLun001/path-change.git
