@@ -3,17 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bmatcuk/doublestar/v4"
-	"github.com/gofiber/fiber/v2"
-	"github.com/mitchellh/go-homedir"
-	"github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
-	"google.golang.org/grpc/codes"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
+
+	"google.golang.org/grpc/codes"
+	"gopkg.in/yaml.v3"
+
+	"github.com/bmatcuk/doublestar/v4"
+	"github.com/gofiber/fiber/v2"
+	"github.com/mitchellh/go-homedir"
+	"github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 )
 
 var (
@@ -24,9 +26,18 @@ var (
 )
 
 var (
-	EmptyPattern = "EMPTY_PATTERN"
-	Match        = "MATCH"
-	NotMatch     = "NOT_MATCH"
+	EmptyPatternResponse = v1beta1.InterceptorResponse{
+		Extensions: fiber.Map{"paths": "EMPTY_PATTERN"},
+		Continue:   true,
+	}
+	MatchResponse = v1beta1.InterceptorResponse{
+		Extensions: fiber.Map{"paths": "MATCH"},
+		Continue:   true,
+	}
+	NotMatchResponse = v1beta1.InterceptorResponse{
+		Extensions: fiber.Map{"paths": "NOT_MATCH"},
+		Continue:   false,
+	}
 )
 
 type repos struct {
@@ -37,9 +48,6 @@ type config struct {
 	URL   string   `yaml:"url"`
 	Paths []string `yaml:"paths,omitempty"`
 }
-
-// todo: git credentials
-// update examples and readme
 
 func fileChange(ctx *fiber.Ctx, repos *repos, repo, branch string) error {
 	var url string
@@ -53,10 +61,8 @@ func fileChange(ctx *fiber.Ctx, repos *repos, repo, branch string) error {
 
 	paths = removeEmptyStrings(paths)
 	if len(paths) <= 0 {
-		return ctx.JSON(v1beta1.InterceptorResponse{
-			Extensions: fiber.Map{"paths": EmptyPattern},
-			Continue:   true,
-		})
+		log.Println(EmptyPatternResponse)
+		return ctx.JSON(EmptyPatternResponse)
 	}
 
 	// mkdir
@@ -82,9 +88,8 @@ func fileChange(ctx *fiber.Ctx, repos *repos, repo, branch string) error {
 	// git clone
 	log.Printf("cloning %s at branch %s", repo, branch)
 	clone := exec.Command("git", "clone", "-b", branch, "--depth", "2", url, clonePath)
-	//err = clone.Run()
 	out, err := clone.CombinedOutput()
-	log.Println(string(out))
+	log.Print(string(out))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprint(err))
 	}
@@ -96,18 +101,17 @@ func fileChange(ctx *fiber.Ctx, repos *repos, repo, branch string) error {
 	}
 	cmd := exec.Command("git", "--no-pager", "diff", "--name-only", "HEAD^")
 	stdout, _ := cmd.CombinedOutput()
+	log.Printf("diff\n%s", string(stdout))
 
 	// remove dir
 	err = os.Chdir("../")
 	err = os.RemoveAll(clonePath)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprint(err))
-
 	}
 
 	// process output
 	output := strings.Split(strings.TrimSpace(string(stdout)), "\n")
-	log.Printf("file change %s:", output)
 	for _, e := range output {
 		for _, path := range paths {
 			m, err := doublestar.PathMatch(path, e)
@@ -115,17 +119,13 @@ func fileChange(ctx *fiber.Ctx, repos *repos, repo, branch string) error {
 				return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprint(err))
 			}
 			if m {
-				return ctx.JSON(v1beta1.InterceptorResponse{
-					Extensions: fiber.Map{"paths": Match},
-					Continue:   true,
-				})
+				log.Printf("match: '%s' file with pattern '%s'", e, path)
+				return ctx.JSON(MatchResponse)
 			}
 		}
 	}
-	return ctx.JSON(v1beta1.InterceptorResponse{
-		Extensions: fiber.Map{"paths": NotMatch},
-		Continue:   false,
-	})
+	log.Println(NotMatchResponse)
+	return ctx.JSON(NotMatchResponse)
 }
 
 func main() {

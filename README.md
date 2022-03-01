@@ -84,5 +84,26 @@ tkn hub install task git-clone -n tekton
 ```
 #### Test
 ```
- curl localhost:8080 -d '{"ref": "refs/heads/main"}' -H 'Content-Type: application/json' -v
+ curl localhost:8080 -d '{"ref": "refs/heads/main", "repository": {"ssh_url": "git@github.com:WLun001/path-change.gitt"}}' -H 'Content-Type: application/json' -v
+```
+Output
+```
+*   Trying 127.0.0.1:8080...
+* TCP_NODELAY set
+* Connected to localhost (127.0.0.1) port 8080 (#0)
+> POST / HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/7.68.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 93
+>
+* upload completely sent off: 93 out of 93 bytes
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 202 Accepted
+< Content-Type: application/json
+< Content-Length: 164
+<
+{"eventListener":"simple-listener","namespace":"tekton","eventListenerUID":"685ffd5e-2a63-46ef-9405-f325e9f1ba94","eventID":"9a6a4530-9aef-4551-ab89-aaaa1c4eae07"}
+* Connection #0 to host localhost left intact
 ```
