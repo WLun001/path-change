@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 
-	"google.golang.org/grpc/codes"
 	"gopkg.in/yaml.v3"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/gofiber/fiber/v2"
 	"github.com/mitchellh/go-homedir"
-	"github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 )
 
 var (
@@ -26,17 +25,20 @@ var (
 )
 
 var (
-	EmptyPatternResponse = v1beta1.InterceptorResponse{
+	EmptyPatternResponse = InterceptorResponse{
 		Extensions: fiber.Map{"paths": "EMPTY_PATTERN"},
 		Continue:   true,
 	}
-	MatchResponse = v1beta1.InterceptorResponse{
+	MatchResponse = InterceptorResponse{
 		Extensions: fiber.Map{"paths": "MATCH"},
 		Continue:   true,
 	}
-	NotMatchResponse = v1beta1.InterceptorResponse{
+	NotMatchResponse = InterceptorResponse{
 		Extensions: fiber.Map{"paths": "NOT_MATCH"},
 		Continue:   false,
+	}
+	SignatureValidatedResponse = InterceptorResponse{
+		Continue: true,
 	}
 )
 
@@ -128,6 +130,33 @@ func fileChange(ctx *fiber.Ctx, repos *repos, repo, branch string) error {
 	return ctx.JSON(NotMatchResponse)
 }
 
+func validateSignature(ctx *fiber.Ctx) error {
+	token := os.Getenv("SECRET_TOKEN")
+	if token != "" {
+		var signature string
+		byteBody := ctx.Body()
+		req := new(InterceptorRequest)
+		err := json.Unmarshal(byteBody, &req)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		}
+		headers := Canonical(req.Header)
+		sha1Header := headers.Get(SHA1SignatureHeader)
+		sha256Header := headers.Get(SHA256SignatureHeader)
+		if sha256Header != "" {
+			signature = sha256Header
+		} else {
+			signature = sha1Header
+		}
+		err = ValidateSignature(signature, []byte(req.Body), []byte(token))
+		if err != nil {
+			return fiber.NewError(http.StatusBadRequest, err.Error())
+		}
+		return ctx.JSON(SignatureValidatedResponse)
+	}
+	return fiber.NewError(http.StatusBadRequest, "SECRET_TOKEN not provided")
+}
+
 func main() {
 
 	configFile := os.Getenv("CONFIG_FILE")
@@ -152,10 +181,10 @@ func main() {
 		if e, ok := err.(*fiber.Error); ok {
 			code = e.Code
 		}
-		return ctx.Status(code).JSON(v1beta1.InterceptorResponse{
+		return ctx.Status(code).JSON(InterceptorResponse{
 			Continue: false,
-			Status: v1beta1.Status{
-				Code:    codes.Internal,
+			Status: Status{
+				Code:    Internal,
 				Message: err.Error(),
 			},
 		})
@@ -165,16 +194,9 @@ func main() {
 		return ctx.SendString("hello world")
 	})
 
-	app.Post("/local", func(ctx *fiber.Ctx) error {
-		repo := ctx.Query("repo")
-		ref := ctx.Query("ref")
-		branch := getBranch(ref)
-		return fileChange(ctx, repos, repo, branch)
-	})
-
 	app.Post("/", func(ctx *fiber.Ctx) error {
 		byteBody := ctx.Body()
-		req := new(v1beta1.InterceptorRequest)
+		req := new(InterceptorRequest)
 		err = json.Unmarshal(byteBody, &req)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
@@ -185,6 +207,15 @@ func main() {
 		branch := getBranch(ref)
 		return fileChange(ctx, repos, repo, branch)
 	})
+
+	app.Post("/local", func(ctx *fiber.Ctx) error {
+		repo := ctx.Query("repo")
+		ref := ctx.Query("ref")
+		branch := getBranch(ref)
+		return fileChange(ctx, repos, repo, branch)
+	})
+
+	app.Post("/signature", validateSignature)
 
 	port := os.Getenv("PORT")
 	if port == "" {

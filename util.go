@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,4 +47,13 @@ func ensureHomeEnvSSHLinkedFromPath(homeenv string, homepath string) {
 			}
 		}
 	}
+}
+
+// Canonical updates the map keys to use the Canonical name
+func Canonical(h map[string][]string) http.Header {
+	c := map[string][]string{}
+	for k, v := range h {
+		c[http.CanonicalHeaderKey(k)] = v
+	}
+	return http.Header(c)
 }
