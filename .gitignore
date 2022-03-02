@@ -14,3 +14,6 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+id_ed25519
+id_ed25519.pub
