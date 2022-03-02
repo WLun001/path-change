@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: path-change
+  namespace: tekton
+  labels:
+    app: path-change
+spec:
+  selector:
+    matchLabels:
+      app: path-change
+  replicas: 1
+  template:
+    metadata:
+      name: path-change
+      labels:
+        app: path-change
+    spec:
+      containers:
+        - name: path-change
+          image: ghcr.io/wlun001/path-change
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 150Mi
+          env:
+            - name: CONFIG_FILE
+              value: /etc/fc/config.yaml
+            - name: SECRET_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: webhook-secret
+                  key: token
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - mountPath: /etc/fc
+              name: config-volume
+            - mountPath: /home/pathchange/.ssh
+              name: ssh-volume
+          securityContext:
+            runAsUser: 1001 # pathchange user
+      securityContext:
+        fsGroup: 1000  # to make SSH key readable
+      volumes:
+        - name: config-volume
+          configMap:
+            name: path-change-conf
+        - name: ssh-volume
+          secret:
+            secretName: ssh-credentials
+            defaultMode: 0400
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: path-change
+  namespace: tekton
+spec:
+  selector:
+    app: path-change
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: path-change-conf
+  namespace: tekton
+data:
+  config.yaml: |
+    repos:
+      demo:
+        url: https://github.com/WLun001/cncf-demo
+        paths:
+          - "examples/**"
+      demo2:
+        url: git@github.com:WLun001/cncf-demo.git
+        paths:
+          - "**"

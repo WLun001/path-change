@@ -1,0 +1,92 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: simple-listener
+  namespace: tekton
+spec:
+  serviceAccountName: tekton-triggers-example-sa
+  triggers:
+    - name: push-trigger
+      interceptors:
+        # optional, for validate signature from webhook
+        # https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks#validating-payloads-from-github
+        - ref:
+            name: path-change-interceptor-validator
+            kind: ClusterInterceptor
+        - ref:
+            name: cel
+          params:
+            - name: overlays
+              value:
+                - key: ref
+                  expression: "body.ref"
+                - key: branch
+                  expression: "body.ref.split('/')[2]"
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: "extensions.branch in ['main']"
+        - ref:
+            name: path-change-interceptor
+            kind: ClusterInterceptor
+          params:
+            - name: repo
+              value: demo2
+
+      bindings:
+        - ref: push-binding
+      template:
+        ref: simple-pipeline-template
+---
+
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: push-binding
+  namespace: tekton
+spec:
+  params:
+    - name: git_branch
+      value: $(extensions.branch)
+    - name: git_url
+      value: $(body.repository.ssh_url)  # this is based on github webhook spec
+---
+
+# most of the time TriggerTemplate cannot be reused across different env for deployment
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: simple-pipeline-template
+  namespace: tekton
+spec:
+  params:
+    - name: git_branch
+      default: main
+    - name: git_url
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: simple-pipeline-run-
+        namespace: tekton
+      spec:
+        pipelineRef:
+          name: simple-pipeline
+        params:
+          - name: git_branch
+            value: $(tt.params.git_branch)
+          - name: git_url
+            value: $(tt.params.git_url)
+        workspaces:
+          - name: git-source
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce # access mode may affect how you can use this volume in parallel tasks
+                resources:
+                  requests:
+                    storage: 100m
+          - name: ssh-creds
+            secret:
+              secretName: ssh-credentials

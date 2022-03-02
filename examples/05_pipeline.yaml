@@ -1,0 +1,58 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: bash
+  namespace: tekton
+spec:
+  params:
+    - name: args
+      type: string
+  workspaces:
+    - name: source
+      description: The folder where we write the message to
+  steps:
+    - name: bash
+      image: bash
+      command:
+        - bash
+        - -c
+      args:
+        - "$(params.args)"
+---
+
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: simple-pipeline
+  namespace: tekton
+spec:
+  params:
+    - name: git_branch
+    - name: git_url
+  workspaces:
+    - name: git-source
+    - name: ssh-creds
+  tasks:
+    - name: fetch-from-git
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.git_url)
+        - name: revision
+          value: $(params.git_branch)
+      workspaces:
+        - name: output
+          workspace: git-source
+        - name: ssh-directory
+          workspace: ssh-creds
+    - name: ls-dir
+      runAfter: [ fetch-from-git ]
+      taskRef:
+        name: bash
+      params:
+        - name: args
+          value: ls -la
+      workspaces:
+        - name: source
+          workspace: git-source
