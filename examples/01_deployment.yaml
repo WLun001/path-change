@@ -66,20 +66,3 @@ spec:
       targetPort: 8080
   type: ClusterIP
 
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: path-change-conf
-  namespace: tekton
-data:
-  config.yaml: |
-    repos:
-      demo:
-        url: https://github.com/WLun001/cncf-demo
-        paths:
-          - "examples/**"
-      demo2:
-        url: git@github.com:WLun001/cncf-demo.git
-        paths:
-          - "**"

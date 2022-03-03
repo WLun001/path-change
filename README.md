@@ -67,6 +67,9 @@ It will return the following response, with `continue` set to `false`
 
 ### Installation
 
+#### Config
+Config can be updated at [examples/02_config.yaml](examples/02_config.yaml)
+
 #### Git credentials
 
 The examples show git authentication with ssh, please check [examples/02_secret.yaml](examples/02_secret.yaml) to

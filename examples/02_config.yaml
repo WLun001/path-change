@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: path-change-conf
+  namespace: tekton
+data:
+  config.yaml: |
+    repos:
+      demo:
+        url: https://github.com/WLun001/path-change
+        paths:
+          - "examples/**"
+      demo2:
+        url: git@github.com:WLun001/path-change.git
+        paths:
+          - "**"
