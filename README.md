@@ -69,7 +69,7 @@ It will return the following response, with `continue` set to `false`
 
 #### Git credentials
 
-The examples show git authentication with ssh, please check [examples/02_secret.yaml](examples/02_secret.yaml)` to
+The examples show git authentication with ssh, please check [examples/02_secret.yaml](examples/02_secret.yaml) to
 replace the actual value.
 
 It works with any git credentials, for examples ssh
