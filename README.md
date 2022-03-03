@@ -122,7 +122,7 @@ ngrok http 8080
 ```
 
 ##### Validating webhook
-if you have set webhook secret
+if you have set webhook secret, please update the secret at [examples/02_secret.yaml](examples/02_secret.yaml)
 
 > full example at [examples/06_trigger.yaml](examples/06_trigger.yaml)
 
