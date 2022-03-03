@@ -134,7 +134,7 @@ if you have set webhook secret, please update the secret at [examples/02_secret.
      name: path-change-interceptor-validator
      kind: ClusterInterceptor
 ```
-Make some commits on and it should trigger the pipeline
+Make some commits on, the tunnel will received status `202`, it should trigger the pipeline, can view it from the dashbaord
 
 #### Testing locally
 
@@ -164,3 +164,4 @@ Output
 {"eventListener":"simple-listener","namespace":"tekton","eventListenerUID":"685ffd5e-2a63-46ef-9405-f325e9f1ba94","eventID":"9a6a4530-9aef-4551-ab89-aaaa1c4eae07"}
 * Connection #0 to host localhost left intact
 ```
+it should trigger the pipeline, can view it from the dashbaord
