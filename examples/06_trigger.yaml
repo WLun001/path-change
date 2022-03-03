@@ -32,7 +32,7 @@ spec:
             kind: ClusterInterceptor
           params:
             - name: repo
-              value: demo2
+              value: demo2 # this will map the values in config.yaml
 
       bindings:
         - ref: push-binding

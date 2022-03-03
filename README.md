@@ -2,18 +2,24 @@
 
 ### Summary
 
-A server for CI/CD pipelines to detect file change based on last commit, with [glob pattern](https://github.com/bmatcuk/doublestar#patterns), compatible
-with [Tekton ClusterInterceptor](https://tekton.dev/docs/triggers/clusterinterceptors/#configuring-a-kubernetes-service-for-the-clusterinterceptor).
+A server for CI/CD pipelines to detect file change based on last commit,
+with [glob pattern](https://github.com/bmatcuk/doublestar#patterns), compatible
+with [Tekton ClusterInterceptor](https://tekton.dev/docs/triggers/clusterinterceptors/#configuring-a-kubernetes-service-for-the-clusterinterceptor)
+.
 
-The behaviour will be similar to [github actions paths](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-including-paths) and [cloud build includeFile](https://cloud.google.com/build/docs/automating-builds/create-manage-triggers#build_trigger). Only trigger build when the file changes match the patterns
+The behaviour will be similar
+to [github actions paths](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-including-paths)
+and [cloud build includeFile](https://cloud.google.com/build/docs/automating-builds/create-manage-triggers#build_trigger)
+. Only trigger build when the file changes match the patterns
 
-Not all CI server/service support file change detection feature. This project will make this available to CI servers, for example, Tekton.
+Not all CI server/service support file change detection feature. This project will make this available to CI servers,
+for example, Tekton.
 
 ### Explanation
 
 Assume have the following config
 
-```
+```yaml
 repos:
   demo:
     url: https://github.com/username/repo
@@ -61,32 +67,80 @@ It will return the following response, with `continue` set to `false`
 
 ### Installation
 
-#### Docker
+#### Git credentials
 
-#### Kubernetes
+The examples show git authentication with ssh, please check [examples/02_secret.yaml](examples/02_secret.yaml)` to
+replace the actual value.
 
-#### config
-
-#### git credentials
-
+It works with any git credentials, for examples ssh
+or [git-credential-store](https://git-scm.com/docs/git-credential-store). Just mount the related files to home directory
+volume
 
 #### Setting `ref` to be read
+
 Most of the webhook has `ref` on the request body, for example
-[github](https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push), [gitlab](https://docs.gitlab.com/ee/user/project/integrations/webhook_events.html#push-events), [gitea](https://docs.gitea.io/en-us/webhooks/#event-information), [gitee](https://gitee.com/help/articles/4186#article-header1)
 
-To customise it, 
+- [github](https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push)
+- [gitlab](https://docs.gitlab.com/ee/user/project/integrations/webhook_events.html#push-events)
+- [gitea](https://docs.gitea.io/en-us/webhooks/#event-information)
+- [gitee](https://gitee.com/help/articles/4186#article-header1)
 
+`ref` can be set through [CEL interceptor](https://tekton.dev/docs/triggers/interceptors/#cel-interceptors)
+> full example at [examples/06_trigger.yaml](examples/06_trigger.yaml)
 
-#### Install
+```yaml
+- ref:
+    name: cel
+    params:
+      - name: overlays
+        value:
+          - key: ref
+            expression: "body.ref"
 ```
+
+#### Apply the examples
+
+> Make sure you have already installed Tekton Pipelines, Trigger and dashboard
+
+```bash
 kubectl apply -f examples
 tkn hub install task git-clone -n tekton
 ```
-#### Test
+
+##### Testing webhook
+
+> For more permanent deployment, consider to use an Ingress to expose it as public url
+
+```bash
+kubectl port-forward -n tekton service/el-simple-listener 8080
+```
+
+Run a tunnel to test webhook, add the generated URL to webhook
+
+```
+ngrok http 8080
+```
+
+##### Validating webhook
+if you have set webhook secret
+
+> full example at [examples/06_trigger.yaml](examples/06_trigger.yaml)
+
+```yaml
+ - ref:
+     name: path-change-interceptor-validator
+     kind: ClusterInterceptor
+```
+Make some commits on and it should trigger the pipeline
+
+#### Testing locally
+
 ```
  curl localhost:8080 -d '{"ref": "refs/heads/main", "repository": {"ssh_url": "git@github.com:WLun001/path-change.gitt"}}' -H 'Content-Type: application/json' -v
 ```
+
 Output
+
 ```
 *   Trying 127.0.0.1:8080...
 * TCP_NODELAY set
