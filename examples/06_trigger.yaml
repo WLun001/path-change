@@ -8,18 +8,11 @@ spec:
   triggers:
     - name: push-trigger
       interceptors:
-        # optional, for validate signature from webhook
-        # https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks#validating-payloads-from-github
-        - ref:
-            name: path-change-interceptor-validator
-            kind: ClusterInterceptor
         - ref:
             name: cel
           params:
             - name: overlays
               value:
-                - key: ref
-                  expression: "body.ref"
                 - key: branch
                   expression: "body.ref.split('/')[2]"
         - ref:

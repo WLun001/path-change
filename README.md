@@ -67,17 +67,39 @@ It will return the following response, with `continue` set to `false`
 
 ### Installation
 
+#### Environment variables
+
+- `PORT` port (:8080)
+- `CONFIG_FILE` config file location
+- `APP_ENV` app env (dev or prod)
+- `SECRET_TOKEN` secret token for webhook
+
+#### Interceptor Params
+
+```yaml
+- ref:
+    name: path-change-interceptor
+    kind: ClusterInterceptor
+    params:
+      - name: repo
+        value: demo2 # this will map the values in config.yaml
+```
+
 #### Config
+
 Config can be updated at [examples/02_config.yaml](examples/02_config.yaml)
 
-#### Git credentials
+Can set config file location with `CONFIG_FILE` env
 
-The examples show git authentication with ssh, please check [examples/02_secret.yaml](examples/02_secret.yaml) to
-replace the actual value.
+```yaml
+ containers:
+   - name: path-change
+     ...
+     env:
+       - name: CONFIG_FILE
+         value: /etc/fc/config.yaml
 
-It works with any git credentials, for examples ssh
-or [git-credential-store](https://git-scm.com/docs/git-credential-store). Just mount the related files to home directory
-volume
+```
 
 #### Setting `ref` to be read
 
@@ -88,17 +110,34 @@ Most of the webhook has `ref` on the request body, for example
 - [gitea](https://docs.gitea.io/en-us/webhooks/#event-information)
 - [gitee](https://gitee.com/help/articles/4186#article-header1)
 
-`ref` can be set through [CEL interceptor](https://tekton.dev/docs/triggers/interceptors/#cel-interceptors)
-> full example at [examples/06_trigger.yaml](examples/06_trigger.yaml)
+`ref` will be retrieved from `req.body`
+
+
+#### Git credentials
+
+The examples show git authentication with ssh, please check [examples/02_secret.yaml](examples/02_secret.yaml) to
+replace the actual value.
+
+It works with any git credentials, for examples ssh
+or [git-credential-store](https://git-scm.com/docs/git-credential-store). Just mount the related files to home directory
+volume
+
+##### webhook secret
+
+if you have set webhook secret, please update the secret at [examples/02_secret.yaml](examples/02_secret.yaml)
+
+> set the secret env at [examples/01_deployment](examples/01_deployment.yaml)
 
 ```yaml
-- ref:
-    name: cel
-    params:
-      - name: overlays
-        value:
-          - key: ref
-            expression: "body.ref"
+ containers:
+   - name: path-change
+     ...
+     env:
+       - name: SECRET_TOKEN
+         valueFrom:
+           secretKeyRef:
+             name: webhook-secret
+             key: token
 ```
 
 #### Apply the examples
@@ -124,16 +163,6 @@ Run a tunnel to test webhook, add the generated URL to webhook
 ngrok http 8080
 ```
 
-##### Validating webhook
-if you have set webhook secret, please update the secret at [examples/02_secret.yaml](examples/02_secret.yaml)
-
-> full example at [examples/06_trigger.yaml](examples/06_trigger.yaml)
-
-```yaml
- - ref:
-     name: path-change-interceptor-validator
-     kind: ClusterInterceptor
-```
 Make some commits on, the tunnel will received status `202`, it should trigger the pipeline, can view it from the dashbaord
 
 #### Testing locally

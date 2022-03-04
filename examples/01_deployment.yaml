@@ -25,6 +25,8 @@ spec:
               cpu: 50m
               memory: 150Mi
           env:
+            - name: APP_ENV
+              value: prod
             - name: CONFIG_FILE
               value: /etc/fc/config.yaml
             - name: SECRET_TOKEN

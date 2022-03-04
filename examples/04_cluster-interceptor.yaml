@@ -7,14 +7,3 @@ spec:
     service:
       name: path-change
       namespace: tekton
----
-apiVersion: triggers.tekton.dev/v1alpha1
-kind: ClusterInterceptor
-metadata:
-  name: path-change-interceptor-validator
-spec:
-  clientConfig:
-    service:
-      name: path-change
-      namespace: tekton
-      path: /signature
