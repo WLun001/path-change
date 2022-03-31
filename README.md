@@ -72,7 +72,7 @@ It will return the following response, with `continue` set to `false`
 - `PORT` port (:8080)
 - `CONFIG_FILE` config file location
 - `APP_ENV` app env (dev or prod)
-- `SECRET_TOKEN` secret token for webhook
+- `SECRET_TOKEN` (optional) secret token for webhook
 
 #### Interceptor Params
 
