@@ -1,3 +1,5 @@
+# ⚠️ Depracated in flavour of [changed files](https://tekton.dev/docs/triggers/interceptors/#adding-changed-files)
+
 # Path Change server
 
 ### Summary
