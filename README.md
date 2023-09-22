@@ -20,7 +20,6 @@ for example, Tekton.
 ### Explanation
 
 Assume have the following config
-
 ```yaml
 repos:
   demo:
